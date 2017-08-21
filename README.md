@@ -47,7 +47,24 @@ function uploadFile(){
 * The method of ``downloadFile()`` and ``uploadFile()`` use Drive API v3. But, don't worry. Recently, I confirmed that users can use Drive API by only [the authorization for Google Services](https://developers.google.com/apps-script/guides/services/authorization). Users are not necessary to enable Drive API on Google API console. By the authorization for Google Services, Drive API is enabled automatically.
 
 <a name="authprocess"></a>
-# Retrieve Refresh Token
+# If you already have refresh token for using OneDrive
+You can use this library by running following script on the project installed this library. And please skip below "If you don't have refresh token for using OneDrive".
+
+~~~javascript
+function setParameters(){
+  var prop = PropertiesService.getScriptProperties();
+  var client_id = "### application ID from OneDrive ###";
+  var client_secret = "### application secret from OneDrive ###";
+  var redirect_uri = "### redirect uri ###";
+  var refresh_token = "### refresh token ###";
+  var res = OnedriveApp.setProp(prop, client_id, client_secret, redirect_uri, refresh_token);
+  Logger.log(res)
+}
+~~~
+
+# If you don't have refresh token for using OneDrive
+Please retrieve refresh token.
+
 **Before you use this library, at first, please carry out as follows.**
 
 ## 1. OneDrive side
