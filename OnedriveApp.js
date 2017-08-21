@@ -6,36 +6,50 @@
  * So please run this 'setProp(client_id, client_secret)'. And please paste following script.<br>
  *<br>
  * function doGet(){<br>
- *  return OnedriveApp.getAccesstoken();<br>
+ *   var prop = PropertiesService.getScriptProperties();<br>
+ *   return OnedriveApp.getAccesstoken(prop);<br>
  * }<br>
  *<br>
  * On the Script Editor -> Publish -> Deploy as Web App -> Click Test web app for your latest code.<br>
  * Please authorize by above process.<br>
  *<br>
+ * @param {Object} PropertiesService.getScriptProperties()
  * @param {String} client_id
  * @param {String} client_secret
  * @param {String} redirect_uri
  * @param {String} refresh_token
  * @return {Object} return values from PropertiesService
  */
-function setProp(client_id, client_secret, redirect_uri, refresh_token){
-    return new OnedriveApp(false).setprop(client_id, client_secret, redirect_uri, refresh_token);
+function setProp(prop, client_id, client_secret, redirect_uri, refresh_token){
+    return new OnedriveApp(false, prop).setprop(client_id, client_secret, redirect_uri, refresh_token);
 }
 
 /**
  * Create OnedriveApp instance<br>
+ * @param {Object} PropertiesService.getScriptProperties()
+ * @param {String} refresh_token
+ * @return {Object} return values from PropertiesService
+ */
+function saveRefreshtoken(prop, refresh_token){
+    return new OnedriveApp(false, prop).saveRefreshtoken(refresh_token);
+}
+
+/**
+ * Create OnedriveApp instance<br>
+ * @param {Object} PropertiesService.getScriptProperties()
  * @return {OnedriveApp} return instance of OnedriveApp
  */
-function init() {
-    return new OnedriveApp(true);
+function init(prop) {
+    return new OnedriveApp(true, prop);
 }
 
 /**
  * Retrieve access token and refresh token<br>
+ * @param {Object} PropertiesService.getScriptProperties()
  * @return {HTML} return HTML code with retrieved access token and refresh token
  */
-function getAccesstoken() {
-    return new OnedriveApp(false).doGet();
+function getAccesstoken(prop) {
+    return new OnedriveApp(false, prop).doGet();
 }
 
 /**
@@ -55,10 +69,11 @@ function getCode(e) {
 
     OnedriveApp.name = "OnedriveApp";
 
-    function OnedriveApp(d) {
+    function OnedriveApp(d, p) {
       this.authurl = "https://login.microsoftonline.com/common/oauth2/v2.0/";
+      this.p = p;
       if (d) {
-        this.prop = PropertiesService.getScriptProperties().getProperties();
+        this.prop = this.p.getProperties();
         this.client_id = this.prop.client_id;
         this.client_secret = this.prop.client_secret;
         this.redirect_uri = this.prop.redirect_uri;
@@ -66,25 +81,36 @@ function getCode(e) {
         this.access_token = getaccesstoken.call(this);
         this.baseurl = "https://graph.microsoft.com/v1.0";
         this.maxchunk = 10485760;
+        if (this.refresh_token == null) {
+          throw new Error("No refresh token. Please save refresh token by 'OnedriveApp.saveRefreshtoken(prop, refresh_token)'.");
+        }
       }
     }
 
     OnedriveApp.prototype.setprop = function(client_id, client_secret, redirect_uri, refresh_token) {
-      var prop;
-      PropertiesService.getScriptProperties().setProperties({
+      this.p.setProperties({
         client_id: client_id,
         client_secret: client_secret,
         redirect_uri: redirect_uri,
         refresh_token: refresh_token,
         scope: "offline_access files.readwrite.all"
       });
-      prop = PropertiesService.getScriptProperties().getProperties();
-      return JSON.stringify(prop);
+      return JSON.stringify(this.p.getProperties());
+    };
+
+    OnedriveApp.prototype.saveRefreshtoken = function(refresh_token_) {
+      if (refresh_token_ == null) {
+        throw new Error("No refresh token.");
+      }
+      this.p.setProperties({
+        refresh_token: refresh_token_
+      });
+      return JSON.stringify(this.p.getProperties());
     };
 
     OnedriveApp.prototype.doGet = function() {
       var appurl, ermsg, html, name, param, prop, qparams, url, value;
-      prop = PropertiesService.getScriptProperties().getProperties();
+      prop = this.p.getProperties();
       if ((prop.client_id == null) || (prop.client_secret == null) || !prop.client_id || !prop.client_secret) {
         ermsg = "Error: Please set client_id and client_secret to ScriptProperties using 'OnedriveApp.setProp(client_id, client_secret)'.\n";
         return HtmlService.createHtmlOutput(ermsg);
@@ -93,17 +119,18 @@ function getCode(e) {
       param = {
         response_type: "code",
         client_id: prop.client_id,
-        redirect_uri: (function() {
+        redirect_uri: (function(p1) {
           var rurl;
+          this.p = p1;
           rurl = ScriptApp.getService().getUrl();
           rurl = rurl.indexOf("/exec") >= 0 ? rurl = rurl.slice(0, -4) + 'usercallback' : rurl.slice(0, -3) + 'usercallback';
-          PropertiesService.getScriptProperties().setProperties({
+          this.p.setProperties({
             redirect_uri: rurl
           });
           return rurl;
-        })(),
-        state: ScriptApp.newStateToken().withMethod("OnedriveApp.getCode").withTimeout(300).createToken(),
-        scope: prop.scope
+        })(this.p),
+        scope: prop.scope,
+        state: ScriptApp.newStateToken().withArgument('client_id', prop.client_id).withArgument('client_secret', prop.client_secret).withArgument('redirect_uri', this.p.getProperties().redirect_uri).withMethod("OnedriveApp.getCode").withTimeout(300).createToken()
       };
       qparams = "?";
       for (name in param) {
@@ -117,32 +144,29 @@ function getCode(e) {
     };
 
     OnedriveApp.prototype.callback = function(e) {
-      var ermsg, html, method, payload, prop, res, url;
-      prop = PropertiesService.getScriptProperties().getProperties();
+      var ermsg, html, method, payload, res, url;
       if (e.parameter.code == null) {
         ermsg = "Error: Please confirm client_id, client_secret and redirect_uri, again.\n";
         ermsg += "client_id, client_secret and redirect_uri you set are as follows.\n";
-        ermsg += "client_id : " + prop.client_id + "\n";
-        ermsg += "client_secret : " + prop.client_secret + "\n";
-        ermsg += "redirect_uri : " + prop.redirect_uri + "\n";
+        ermsg += "client_id : " + e.parameter.client_id + "\n";
+        ermsg += "client_secret : " + e.parameter.client_secret + "\n";
+        ermsg += "redirect_uri : " + e.parameter.redirect_uri + "\n";
         return HtmlService.createHtmlOutput(ermsg);
       }
       url = this.authurl + "token";
       method = "post";
       payload = {
-        client_id: prop.client_id,
-        client_secret: prop.client_secret,
-        redirect_uri: prop.redirect_uri,
+        client_id: e.parameter.client_id,
+        client_secret: e.parameter.client_secret,
+        redirect_uri: e.parameter.redirect_uri,
         code: e.parameter.code,
         grant_type: "authorization_code"
       };
       res = fetch.call(this, url, method, payload, null);
-      PropertiesService.getScriptProperties().setProperties({
-        access_token: res.access_token,
-        refresh_token: res.refresh_token
-      });
       html = "<p><b>Retrieving access token and refresh token was succeeded!</b></p>";
-      html += "<pre>Access token and refresh token were saved to ScriptProperties.</pre>";
+      html += "<br>";
+      html += "<p><b>Please save refresh token by 'OnedriveApp.saveRefreshtoken(prop, refresh_token)'!</b></p>";
+      html += "<br>";
       html += "<pre>You can use OneDrive API using this library.\n</pre>";
       html += "<pre>Your access token and refresh token are as follows.\n</pre>";
       html += "<pre>" + JSON.stringify(res, null, "  ") + "</pre>";
