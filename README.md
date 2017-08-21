@@ -8,6 +8,7 @@ This is a library of Google Apps Script for using Microsoft OneDrive.
 ## Feature
 This library can carry out following functions using OneDrive APIs.
 
+1. [Retrieve access token and refresh token using client_id and client_secret](#authprocess)
 1. [Retrieve file list on OneDrive.](#Retrievefilelist)
 1. [Delete files and folders on OneDrive.](#Deletefilesandfolders)
 1. [Create folder on OneDrive.](#Createfolder)
@@ -45,10 +46,35 @@ function uploadFile(){
 
 * The method of ``downloadFile()`` and ``uploadFile()`` use Drive API v3. But, don't worry. Recently, I confirmed that users can use Drive API by only [the authorization for Google Services](https://developers.google.com/apps-script/guides/services/authorization). Users are not necessary to enable Drive API on Google API console. By the authorization for Google Services, Drive API is enabled automatically.
 
+<a name="authprocess"></a>
 # Retrieve Refresh Token
-**Before you use this library, at first, you have to retrieve refresh token from OneDrive.** The refresh token is used for retrieving access token for using OneDrive APIs. You can retrieve the refresh token using GAS. Please check the gists and retrieve refresh token.
+**Before you use this library, at first, please carry out as follows.**
 
-- **Gists : [https://gist.github.com/tanaikech/d9674f0ead7e3320c5e3184f5d1b05cc](https://gist.github.com/tanaikech/d9674f0ead7e3320c5e3184f5d1b05cc)**
+- Please copy and paste following script to your script editor installed this library.
+
+~~~javascript
+function doGet(){return OnedriveApp.getAccesstoken()}
+~~~
+
+- On the Script Editor
+    - File
+    - -> Manage Versions
+    - -> Save New Version
+    - Publish
+    - -> Deploy as Web App
+    - -> At Execute the app as, select **"your account"**
+    - -> At Who has access to the app, select **"Only myself"**
+    - -> Click "Deploy"
+    - -> Click **"latest code"** (By this click, it launches the authorization process.)
+
+After it launched the authorization process, please proceed by following the wizard. By this, you can retrieve access token and refresh token.
+
+**Please run this process only one time on the script editor installed this library.** By only one time running this, you can use all of this library. After run this process, you can undeploy web apps.
+
+If your OneDrive Application was modified, please run this again.
+
+
+Or, if you can retrieve refresh token by other script, please check [here](https://gist.github.com/tanaikech/d9674f0ead7e3320c5e3184f5d1b05cc).
 
 # Usage
 ## At First, Please Run This!
@@ -189,6 +215,10 @@ e-mail: tanaike@hotmail.com
 * v1.0.0 (August 16, 2017)
 
     Initial release.
+
+* v1.0.1 (August 21, 2017)
+
+    [Added a method for retrieving access token and refresh token using this library.](#authprocess)
 
 # Etc
 If you want the sample script for node.js, please check [here](https://gist.github.com/tanaikech/22bfb05e61f0afb8beed29dd668bdce9).
