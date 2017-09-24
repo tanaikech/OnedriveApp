@@ -1,40 +1,4 @@
 /**
- * Set parameters to PropertiesService<br>
- * At first, please set parameters using this. Access token is retrieved by the refresh token.<br>
- *<br>
- * If you don't have refresh token, don't worry. In this case, please set only client_id and client_secret.<br>
- * So please run this 'setProp(client_id, client_secret)'. And please paste following script.<br>
- *<br>
- * function doGet(){<br>
- *   var prop = PropertiesService.getScriptProperties();<br>
- *   return OnedriveApp.getAccesstoken(prop);<br>
- * }<br>
- *<br>
- * On the Script Editor -> Publish -> Deploy as Web App -> Click Test web app for your latest code.<br>
- * Please authorize by above process.<br>
- *<br>
- * @param {Object} PropertiesService.getScriptProperties()
- * @param {String} client_id
- * @param {String} client_secret
- * @param {String} redirect_uri
- * @param {String} refresh_token
- * @return {Object} return values from PropertiesService
- */
-function setProp(prop, client_id, client_secret, redirect_uri, refresh_token){
-    return new OnedriveApp(false, prop).setprop(client_id, client_secret, redirect_uri, refresh_token);
-}
-
-/**
- * Create OnedriveApp instance<br>
- * @param {Object} PropertiesService.getScriptProperties()
- * @param {String} refresh_token
- * @return {Object} return values from PropertiesService
- */
-function saveRefreshtoken(prop, refresh_token){
-    return new OnedriveApp(false, prop).saveRefreshtoken(refresh_token);
-}
-
-/**
  * Create OnedriveApp instance<br>
  * @param {Object} PropertiesService.getScriptProperties()
  * @return {OnedriveApp} return instance of OnedriveApp
@@ -43,14 +7,24 @@ function init(prop) {
     return new OnedriveApp(true, prop);
 }
 
+
 /**
  * Retrieve access token and refresh token<br>
  * @param {Object} PropertiesService.getScriptProperties()
  * @return {HTML} return HTML code with retrieved access token and refresh token
  */
-function getAccesstoken(prop) {
-    return new OnedriveApp(false, prop).doGet();
+function getAccesstoken(prop, e) {
+    var OA = new OnedriveApp(false, prop);
+    if (!e.length) {
+        return OA.doGet();
+    } else if (e.length > 1) {
+        if (e[0] == "doget") {
+            OA.saveRefreshtoken(JSON.parse(e[1]).refresh_token);
+        }
+    }
+    return;
 }
+
 
 /**
  * Retrieve authorization code.<br>
@@ -81,6 +55,7 @@ function getCode(e) {
         this.access_token = getaccesstoken.call(this);
         this.baseurl = "https://graph.microsoft.com/v1.0";
         this.maxchunk = 10485760;
+        this.sheeturl = "https://graph.microsoft.com/beta/me/drive/items/";
         if (this.refresh_token == null) {
           throw new Error("No refresh token. Please save refresh token by 'OnedriveApp.saveRefreshtoken(prop, refresh_token)'.");
         }
@@ -93,7 +68,7 @@ function getCode(e) {
         client_secret: client_secret,
         redirect_uri: redirect_uri,
         refresh_token: refresh_token,
-        scope: "offline_access files.readwrite.all"
+        scope: "offline_access files.readwrite.all files.readwrite files.read"
       });
       return JSON.stringify(this.p.getProperties());
     };
@@ -144,7 +119,7 @@ function getCode(e) {
     };
 
     OnedriveApp.prototype.callback = function(e) {
-      var ermsg, html, method, payload, res, url;
+      var ermsg, method, payload, res, t, url;
       if (e.parameter.code == null) {
         ermsg = "Error: Please confirm client_id, client_secret and redirect_uri, again.\n";
         ermsg += "client_id, client_secret and redirect_uri you set are as follows.\n";
@@ -163,15 +138,35 @@ function getCode(e) {
         grant_type: "authorization_code"
       };
       res = fetch.call(this, url, method, payload, null);
-      html = "<p><b>Retrieving access token and refresh token was succeeded!</b></p>";
-      html += "<br>";
-      html += "<p><b>Please save refresh token by 'OnedriveApp.saveRefreshtoken(prop, refresh_token)'!</b></p>";
-      html += "<br>";
-      html += "<pre>You can use OneDrive API using this library.\n</pre>";
-      html += "<pre>Your access token and refresh token are as follows.\n</pre>";
-      html += "<pre>" + JSON.stringify(res, null, "  ") + "</pre>";
-      html += "<pre>Please close this window.\n</pre>";
-      return HtmlService.createHtmlOutput(html);
+      t = HtmlService.createTemplateFromFile('doget');
+      t.data = res;
+      return t.evaluate();
+    };
+
+    OnedriveApp.prototype.getESheet = function(id) {
+      var headers, method, res, url;
+      url = this.sheeturl + id + "/workbook/worksheets";
+      method = "get";
+      headers = {
+        "Authorization": "Bearer " + this.access_token
+      };
+      res = fetch.call(this, url, method, null, headers, null);
+      return res;
+    };
+
+    OnedriveApp.prototype.getAt = function() {
+      return this.access_token;
+    };
+
+    OnedriveApp.prototype.createSession = function(path) {
+      var headers, method, res, url;
+      url = this.sheeturl + "root:/" + path + ":/workbook/";
+      method = "get";
+      headers = {
+        "Authorization": "Bearer " + this.access_token
+      };
+      res = fetch.call(this, url, method, null, headers, null);
+      return res;
     };
 
     OnedriveApp.prototype.getFilelist = function(folder) {

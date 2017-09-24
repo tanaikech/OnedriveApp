@@ -47,23 +47,7 @@ function uploadFile(){
 * The method of ``downloadFile()`` and ``uploadFile()`` use Drive API v3. But, don't worry. Recently, I confirmed that users can use Drive API by only [the authorization for Google Services](https://developers.google.com/apps-script/guides/services/authorization). Users are not necessary to enable Drive API on Google API console. By the authorization for Google Services, Drive API is enabled automatically.
 
 <a name="authprocess"></a>
-# If you already have refresh token for using OneDrive
-You can use this library by running following script on the project installed this library. And please skip below "If you don't have refresh token for using OneDrive".
-
-~~~javascript
-function setParameters(){
-  var prop = PropertiesService.getScriptProperties();
-  var client_id = "### application ID from OneDrive ###";
-  var client_secret = "### application secret from OneDrive ###";
-  var redirect_uri = "### redirect uri ###";
-  var refresh_token = "### refresh token ###";
-  var res = OnedriveApp.setProp(prop, client_id, client_secret, redirect_uri, refresh_token);
-  Logger.log(res)
-}
-~~~
-
-# If you don't have refresh token for using OneDrive
-Please retrieve refresh token.
+# Retrieve access token and refresh token for using OneDrive
 
 **Before you use this library, at first, please carry out as follows.**
 
@@ -75,24 +59,18 @@ Please retrieve refresh token.
 1. Click save button.
 
 ## 2. Google side
-### 2-1. Set client_id and client_secret
-Please run below after inputed ``client_id`` and ``client_secret``. When you run this, you can see the set parameters as the response.
+Please copy and paste following script (``doGet(e)``) on the script editor installed the library, and import your ``client_id`` and ``client_secret``.
 
 ~~~javascript
-function setParameters(){
-  var client_id = "### application ID from OneDrive ###";
-  var client_secret = "### application secret from OneDrive ###";
+function doGet(e){
   var prop = PropertiesService.getScriptProperties();
-  var res = OnedriveApp.setProp(prop, client_id, client_secret);
-  Logger.log(res)
+  OnedriveApp.setProp(
+    prop,
+    "### client id ###", // <--- client_id
+    "### client secret ###" // <--- client_secret
+  )
+  return OnedriveApp.getAccesstoken(prop, e);
 }
-~~~
-
-### 2-2. Retrieve refresh token
-- Please copy and paste following script to your script editor installed this library.
-
-~~~javascript
-function doGet(){return OnedriveApp.getAccesstoken(PropertiesService.getScriptProperties())}
 ~~~
 
 - On the Script Editor
@@ -109,7 +87,7 @@ function doGet(){return OnedriveApp.getAccesstoken(PropertiesService.getScriptPr
 ## 3. OneDrive side
 When you click **"latest code"**, new tab on your browser is launched and you can see ``Please push this button after set redirect_uri to 'https://script.google.com/macros/s/#####/usercallback' at your application.``.
 
-- Copy the URL and click the link of ``your application``.
+- Copy the URL, and click the link of ``your application``.
 - Add platform. Select WEB.
 - Input the copied URL to redirect uri.
 - Click save button.
@@ -119,17 +97,12 @@ When you click **"latest code"**, new tab on your browser is launched and you ca
 1. Click the button.
 1. Authorize.
 1. You can see ``Retrieving access token and refresh token was succeeded!``. If that is not displayed, please confirm your client_id and client_secret again.
-1. Access token and refresh token are shown.
-1. In order to save the refresh token, please run the following script.
+1. Access token and refresh token are shown. And they are automatically saved to your PropertiesService. **You can use OnedriveApp from now.**
 
-~~~javascript
-function saveRefreshtoken(){
-  var refresh_token = "### refresh token ###";
-  var prop = PropertiesService.getScriptProperties();
-  var res = OnedriveApp.saveRefreshtoken(prop, refresh_token)
-  Logger.log(res)
-}
-~~~
+This process can be seen at following demonstration.
+
+![](images/demo_auth.gif)
+
 
 **Please run this process only one time on the script editor installed this library.** By only one time running this, you can use all of this library. After run this process, you can undeploy web apps.
 
@@ -298,6 +271,11 @@ e-mail: tanaike@hotmail.com
 * v1.0.2 (August 21, 2017)
 
     [Moved the instance of ``PropertiesService.getScriptProperties()`` to outside of this library. When there is the ``PropertiesService.getScriptProperties()`` inside the library, it was found that the parameters that users set was saved to the library. So this was modified. I'm sorry that I couldn't notice this situation.](#authprocess)
+
+* v1.1.0 (September 24, 2017)
+
+    [From this version, retrieving access token and refresh token became more easy.](#authprocess)
+
 
 # Etc
 If you want the sample script for node.js, please check [here](https://gist.github.com/tanaikech/22bfb05e61f0afb8beed29dd668bdce9).
