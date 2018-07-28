@@ -276,6 +276,9 @@ e-mail: tanaike@hotmail.com
 
     [From this version, retrieving access token and refresh token became more easy.](#authprocess)
 
+* v1.1.1 (July 28, 2018)
+
+    A serious bug was removed. I had forgot that it added setProp(). I'm really sorry for this. And thank you so much jesus21282.
 
 # Etc
 If you want the sample script for node.js, please check [here](https://gist.github.com/tanaikech/22bfb05e61f0afb8beed29dd668bdce9).

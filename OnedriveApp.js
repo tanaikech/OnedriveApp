@@ -1,4 +1,30 @@
 /**
+ * Set parameters to PropertiesService<br>
+ * At first, please set parameters using this. Access token is retrieved by the refresh token.<br>
+ *<br>
+ * If you don't have refresh token, don't worry. In this case, please set only client_id and client_secret.<br>
+ * So please run this 'setProp(client_id, client_secret)'. And please paste following script.<br>
+ *<br>
+ * function doGet(){<br>
+ *   var prop = PropertiesService.getScriptProperties();<br>
+ *   return OnedriveApp.getAccesstoken(prop);<br>
+ * }<br>
+ *<br>
+ * On the Script Editor -> Publish -> Deploy as Web App -> Click Test web app for your latest code.<br>
+ * Please authorize by above process.<br>
+ *<br>
+ * @param {Object} PropertiesService.getScriptProperties()
+ * @param {String} client_id
+ * @param {String} client_secret
+ * @param {String} redirect_uri
+ * @param {String} refresh_token
+ * @return {Object} return values from PropertiesService
+ */
+function setProp(prop, client_id, client_secret, redirect_uri, refresh_token){
+    return new OnedriveApp(false, prop).setprop(client_id, client_secret, redirect_uri, refresh_token);
+}
+
+/**
  * Create OnedriveApp instance<br>
  * @param {Object} PropertiesService.getScriptProperties()
  * @return {OnedriveApp} return instance of OnedriveApp
