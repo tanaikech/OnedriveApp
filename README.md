@@ -82,7 +82,8 @@ function doGet(e){
     - -> At Execute the app as, select **"your account"**
     - -> At Who has access to the app, select **"Only myself"**
     - -> Click "Deploy"
-    - -> Click **"latest code"** (By this click, it launches the authorization process.)
+    - -> Click **"latest code"**. **At First, Please Do This!**
+        - By this click, it launches the authorization process. **The refresh token was automatically saved.**
 
 ## 3. OneDrive side
 When you click **"latest code"**, new tab on your browser is launched and you can see ``Please push this button after set redirect_uri to 'https://script.google.com/macros/s/#####/usercallback' at your application.``.
@@ -112,15 +113,6 @@ If your OneDrive Application was modified, please run this again.
 Or, if you can retrieve refresh token by other script, please check [here](https://gist.github.com/tanaikech/d9674f0ead7e3320c5e3184f5d1b05cc).
 
 # Usage
-## At First, Please Run This!
-**After it retrieves the refresh token, please run ``OnedriveApp.setProp()``. ``OnedriveApp.setProp()`` inputs the parameters (client id, client secret, redirect uri and refresh token) for the authorization to ``PropertiesService``.**
-
-~~~javascript
-var res = OnedriveApp.setProp(client_id, client_secret, redirect_uri, refresh_token);
-~~~
-
-When it runs this, parameters in the ``PropertiesService`` is returned.
-
 <a name="Retrievefilelist"></a>
 ## 1. Retrieve file list on OneDrive
 
