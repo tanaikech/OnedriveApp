@@ -320,6 +320,7 @@ e-mail: tanaike@hotmail.com
   A serious bug was removed. I had forgot that it added setProp(). I'm really sorry for this. And thank you so much jesus21282.
 
 - v1.1.1 (January 4, 2020)
+
   ["Retrieve access token and refresh token for using OneDrive"](#authprocess) of the document was changed.
 
 # Etc
