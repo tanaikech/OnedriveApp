@@ -82,6 +82,8 @@ function uploadFile() {
 
 By above operation, the preparation is done.
 
+[Ref](https://docs.microsoft.com/en-us/azure/active-directory/develop/quickstart-register-app)
+
 ## 2. Google side
 
 Please copy and paste following script (`doGet(e)`) on the script editor installed the library, and import your **"Application (client) ID"** and **the created secret value** to `client_id` and `client_secret` in the script.
