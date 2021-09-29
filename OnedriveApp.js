@@ -262,7 +262,7 @@ function getCode(e) {
         throw new Error("No file ID.");
       }
       path_ = path_ == null ? "/" : path_;
-      fileinf = (ref = convToMicrosoft.call(this, fileid_)) != null ? ref : fileid_;
+      fileinf = (ref = convToMicrosoft.call(this, fileid_)) != null ? ref : [fileid_, DriveApp.getFileById(fileid_).getName()];
       file = DriveApp.getFileById(fileinf[0]);
       filesize = 0;
       byteAr = [];

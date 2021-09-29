@@ -31,9 +31,7 @@ function createFolder() {
 }
 
 function uploadFile() {
-  var id = DriveApp.getFilesByName("samplespreadsheet")
-    .next()
-    .getId();
+  var id = DriveApp.getFilesByName("samplespreadsheet").next().getId();
   OnedriveApp.init(PropertiesService.getScriptProperties()).uploadFile(
     id,
     "/SampleFolder/"
@@ -324,6 +322,10 @@ e-mail: tanaike@hotmail.com
 - v1.1.1 (January 4, 2020)
 
   ["Retrieve access token and refresh token for using OneDrive"](#authprocess) of the document was changed.
+
+- v1.1.2 (September 29, 2021)
+
+  A bug of method of `uploadFile` was removed. By this, the files except for Google Docs files can be uploaded to OneDrive.
 
 # Etc
 
