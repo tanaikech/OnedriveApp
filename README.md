@@ -369,7 +369,7 @@ About the properties of `obj`, you can see the following explanation.
 - `order`: `desc` or `asc`.
 - `folderId`: When you use this property, you can retrieve the email list from the specific folder of Email. About the method for retrieving the folder ID, please check "[Forward Email messages](#forwardemails)". When you don't use this property, all emails are retrieved as a list.
 
-Sample script: [This is a sample script for retrieving all emails from own emails of Microsoft and put to the Google Spreadsheet.]()
+Sample script: [This is a sample script for retrieving all emails from own emails of Microsoft and put to the Google Spreadsheet.](https://gist.github.com/tanaikech/45a5511cf2a4a42660b52b3409f7b537)
 
 <a name="getemails"></a>
 
