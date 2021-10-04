@@ -18,10 +18,11 @@
  * @param {String} client_secret
  * @param {String} redirect_uri
  * @param {String} refresh_token
+ * @param {String} scope
  * @return {Object} return values from PropertiesService
  */
-function setProp(prop, client_id, client_secret, redirect_uri, refresh_token){
-    return new OnedriveApp(false, prop).setprop(client_id, client_secret, redirect_uri, refresh_token);
+function setProp(prop, client_id, client_secret, redirect_uri, refresh_token, scope){
+    return new OnedriveApp(false, prop).setprop(client_id, client_secret, redirect_uri, refresh_token, scope);
 }
 
 /**
@@ -65,12 +66,13 @@ function getCode(e) {
 (function(r) {
   var OnedriveApp;
   OnedriveApp = (function() {
-    var convToGoogle, convToMicrosoft, fetch, getaccesstoken, getparams;
+    var addQuery, batchRequest, convToGoogle, convToMicrosoft, createEmailBody, fetch, getaccesstoken, getparams;
 
     OnedriveApp.name = "OnedriveApp";
 
     function OnedriveApp(d, p) {
       this.authurl = "https://login.microsoftonline.com/common/oauth2/v2.0/";
+      this.scopes = "offline_access files.readwrite.all files.readwrite files.read Mail.ReadBasic Mail.Read Mail.ReadWrite Mail.Send";
       this.p = p;
       if (d) {
         this.prop = this.p.getProperties();
@@ -88,13 +90,13 @@ function getCode(e) {
       }
     }
 
-    OnedriveApp.prototype.setprop = function(client_id, client_secret, redirect_uri, refresh_token) {
+    OnedriveApp.prototype.setprop = function(client_id, client_secret, redirect_uri, refresh_token, scope) {
       this.p.setProperties({
         client_id: client_id,
         client_secret: client_secret,
         redirect_uri: redirect_uri,
         refresh_token: refresh_token,
-        scope: "offline_access files.readwrite.all files.readwrite files.read"
+        scope: scope || this.scopes
       });
       return JSON.stringify(this.p.getProperties());
     };
@@ -119,6 +121,7 @@ function getCode(e) {
       url = this.authurl + "authorize";
       param = {
         response_type: "code",
+        response_mode: "query",
         client_id: prop.client_id,
         redirect_uri: (function(p1) {
           var rurl;
@@ -161,12 +164,204 @@ function getCode(e) {
         client_secret: e.parameter.client_secret,
         redirect_uri: e.parameter.redirect_uri,
         code: e.parameter.code,
-        grant_type: "authorization_code"
+        grant_type: "authorization_code",
+        scope: this.scopes
       };
       res = fetch.call(this, url, method, payload, null);
       t = HtmlService.createTemplateFromFile('doget');
       t.data = res;
       return t.evaluate();
+    };
+
+    OnedriveApp.prototype.getAccessToken = function() {
+      return this.access_token;
+    };
+
+    OnedriveApp.prototype.getEmailList = function(obj) {
+      var ar, headers, keys, method, number, res, url;
+      url = this.baseurl + "/me/messages";
+      number = -1;
+      if (obj) {
+        if (obj.hasOwnProperty("numberOfEmails")) {
+          number = obj.numberOfEmails;
+          delete obj.numberOfEmails;
+        }
+        if (obj.hasOwnProperty("select") && obj.select.indexOf("*") === -1) {
+          obj.select = obj.select.join(",");
+        } else if (obj.select.indexOf("*") > -1) {
+          delete obj.select;
+        }
+        if (obj.hasOwnProperty("orderby")) {
+          obj.orderby = obj.orderby + " " + (obj.hasOwnProperty("order") ? obj.order : "asc");
+          if (obj.hasOwnProperty("order")) {
+            if (obj.order !== "asc" && obj.order !== "desc") {
+              throw new Error("Order is 'asc' or 'desc'.");
+            }
+            delete obj.order;
+          }
+        }
+        if (obj.hasOwnProperty("folderId")) {
+          url = this.baseurl + "/me/mailFolders/" + obj.folderId + "/messages";
+          delete obj.folderId;
+        }
+        keys = Object.keys(obj);
+        keys.forEach(function(k) {
+          obj["$" + k] = obj[k];
+          return delete obj[k];
+        });
+      } else {
+        obj = {
+          $select: "sender,subject,bodyPreview",
+          $orderby: "createdDateTime asc"
+        };
+      }
+      obj["$top"] = 1000;
+      url += addQuery(obj);
+      method = "get";
+      headers = {
+        "Authorization": "Bearer " + this.access_token
+      };
+      ar = [];
+      while (true) {
+        res = fetch.call(this, url, method, null, headers, null);
+        if (!res.hasOwnProperty("value")) {
+          throw new Error("Invalid parameter. Please check it again.");
+        }
+        if (res.value.length > 0) {
+          ar = ar.concat(res.value);
+        }
+        url = res["@odata.nextLink"];
+        if (!res.hasOwnProperty("@odata.nextLink")) {
+          break;
+        }
+      }
+      if (number !== -1) {
+        ar.splice(number);
+      }
+      return ar;
+    };
+
+    OnedriveApp.prototype.getEmailMessages = function(obj) {
+      var requests;
+      if (!obj || !Array.isArray(obj)) {
+        throw new Error('Please set message IDs as an array like ["messageId1", "messageId2",,,].');
+      }
+      requests = obj.map(function(id, i) {
+        return {
+          url: "/me/messages/" + id,
+          method: "GET",
+          id: i + 1
+        };
+      });
+      return batchRequest.call(this, requests);
+    };
+
+    OnedriveApp.prototype.sendEmails = function(obj) {
+      var requests;
+      if (!obj || !Array.isArray(obj)) {
+        throw new Error('Please set object for sending messages.');
+      }
+      if (obj.some(function(e) {
+        return !e.subject || (!e.body && !e.htmlBody) || !e.to;
+      })) {
+        throw new Error('Please check the object again.');
+      }
+      requests = obj.map(function(e, i) {
+        return {
+          url: "/me/sendMail",
+          method: "POST",
+          id: i + 1,
+          body: createEmailBody.call(this, e),
+          headers: {
+            "Content-Type": "application/json"
+          }
+        };
+      });
+      return batchRequest.call(this, requests);
+    };
+
+    OnedriveApp.prototype.replyEmails = function(obj) {
+      var requests;
+      if (!obj || !Array.isArray(obj)) {
+        throw new Error('Please set object for sending messages.');
+      }
+      if (obj.some(function(e) {
+        return !e.messageId || (!e.body && !e.htmlBody) || !e.to;
+      })) {
+        throw new Error('Please check the object again.');
+      }
+      requests = obj.map(function(e, i) {
+        var body;
+        body = createEmailBody.call(this, e);
+        delete body.message.messageId;
+        delete body.message.subject;
+        return {
+          url: "/me/messages/" + e.messageId + "/reply",
+          method: "POST",
+          id: i + 1,
+          body: body,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        };
+      });
+      return batchRequest.call(this, requests);
+    };
+
+    OnedriveApp.prototype.forwardEmails = function(obj) {
+      var requests;
+      if (!obj || !Array.isArray(obj)) {
+        throw new Error('Please set object for sending messages.');
+      }
+      if (obj.some(function(e) {
+        return !e.messageId || !e.to;
+      })) {
+        throw new Error('Please check the object again.');
+      }
+      requests = obj.map(function(e, i) {
+        var body;
+        body = createEmailBody.call(this, e);
+        delete body.message.messageId;
+        return {
+          url: "/me/messages/" + e.messageId + "/forward",
+          method: "POST",
+          id: i + 1,
+          body: body,
+          headers: {
+            "Content-Type": "application/json"
+          }
+        };
+      });
+      return batchRequest.call(this, requests);
+    };
+
+    OnedriveApp.prototype.getEmailFolders = function() {
+      var headers, method, res, url;
+      url = this.baseurl + "/me/mailFolders?$top=1000";
+      method = "get";
+      headers = {
+        "Authorization": "Bearer " + this.access_token
+      };
+      res = fetch.call(this, url, method, null, headers, null);
+      if (!res.hasOwnProperty("value")) {
+        throw new Error("Invalid parameter. Please check it again.");
+      }
+      return res;
+    };
+
+    OnedriveApp.prototype.deleteEmails = function(obj) {
+      var requests;
+      if (!obj || !Array.isArray(obj)) {
+        throw new Error('Please set message IDs as an array like ["messageId1", "messageId2",,,].');
+      }
+      requests = obj.map(function(id, i) {
+        return {
+          url: "/me/messages/" + id,
+          method: "DELETE",
+          id: i + 1
+        };
+      });
+      return batchRequest.call(this, requests);
     };
 
     OnedriveApp.prototype.getESheet = function(id) {
@@ -257,7 +452,7 @@ function getCode(e) {
     };
 
     OnedriveApp.prototype.uploadFile = function(fileid_, path_) {
-      var ar, byteAr, file, fileinf, filepath, filesize, headers, j, len, method, payload, ref, res, result, st, url;
+      var ar, byteAr, file, fileinf, filepath, filesize, headers, l, len, method, payload, ref, res, result, st, url;
       if (fileid_ == null) {
         throw new Error("No file ID.");
       }
@@ -284,8 +479,8 @@ function getCode(e) {
       url = (fetch.call(this, url, method, payload, headers, null)).uploadUrl;
       method = "put";
       res = [];
-      for (j = 0, len = ar.length; j < len; j++) {
-        st = ar[j];
+      for (l = 0, len = ar.length; l < len; l++) {
+        st = ar[l];
         headers = {
           "Content-Range": st.cr
         };
@@ -464,11 +659,11 @@ function getCode(e) {
     };
 
     getparams = function(filesize) {
-      var allsize, ar, bend, bstart, clen, cr, i, j, ref, ref1, sep;
+      var allsize, ar, bend, bstart, clen, cr, i, l, ref, ref1, sep;
       allsize = filesize;
       sep = allsize < this.maxchunk ? allsize : this.maxchunk - 1;
       ar = [];
-      for (i = j = 0, ref = allsize - 1, ref1 = sep; ref1 > 0 ? j <= ref : j >= ref; i = j += ref1) {
+      for (i = l = 0, ref = allsize - 1, ref1 = sep; ref1 > 0 ? l <= ref : l >= ref; i = l += ref1) {
         bstart = i;
         bend = i + sep - 1 < allsize ? i + sep - 1 : allsize - 1;
         cr = 'bytes ' + bstart + '-' + bend + '/' + allsize;
@@ -495,6 +690,11 @@ function getCode(e) {
         grant_type: "refresh_token"
       };
       res = fetch.call(this, url, method, payload, null, null);
+      if (res.refresh_token !== this.refresh_token) {
+        this.p.setProperties({
+          refresh_token: res.refresh_token
+        });
+      }
       this.access_token = res.access_token;
       if (this.access_token === null || this.access_token === "") {
         throw new Error("At first, please run setProp().");
@@ -523,6 +723,107 @@ function getCode(e) {
         r = res.getBlob();
       }
       return r;
+    };
+
+    batchRequest = function(requests) {
+      var ar, headers, i, l, limit, method, payload, ref, res, split, url;
+      url = this.baseurl + "/$batch";
+      method = "POST";
+      headers = {
+        "Authorization": "Bearer " + this.access_token,
+        "Content-Type": "application/json",
+        "Prefer": "respond-async"
+      };
+      ar = [];
+      limit = 20;
+      split = Math.ceil(requests.length / limit);
+      for (i = l = 0, ref = split; 0 <= ref ? l < ref : l > ref; i = 0 <= ref ? ++l : --l) {
+        payload = {
+          requests: requests.splice(0, limit)
+        };
+        res = fetch.call(this, url, method, JSON.stringify(payload), headers, null);
+        ar = ar.concat(res.responses);
+      }
+      return ar;
+    };
+
+    addQuery = function(obj) {
+      return Object.keys(obj).reduce(function(p, e, i) {
+        return p + (i === 0 ? "?" : "&") + (Array.isArray(obj[e]) ? obj[e].reduce(function(str, f, j) {
+          return str + e + "=" + encodeURIComponent(f) + (j !== obj[e].length - 1 ? "&" : "");
+        }, "") : e + "=" + encodeURIComponent(obj[e]));
+      }, "");
+    };
+
+    createEmailBody = function(e) {
+      var remain, temp;
+      temp = {
+        message: {
+          subject: e.subject,
+          toRecipients: e.to.map(function(f) {
+            return {
+              emailAddress: {
+                name: f.name,
+                address: f.email
+              }
+            };
+          })
+        }
+      };
+      delete e.subject;
+      delete e.to;
+      if (e.body) {
+        temp.message.body = {
+          contentType: "Text",
+          content: e.body
+        };
+        delete e.body;
+      } else if (e.htmlBody) {
+        temp.message.body = {
+          contentType: "HTML",
+          content: e.htmlBody
+        };
+        delete e.htmlBody;
+      }
+      if (e.cc && Array.isArray(e.cc)) {
+        temp.message.ccRecipients = e.cc.map(function(f) {
+          return {
+            name: f.name,
+            emailAddress: f.email
+          };
+        });
+        delete e.cc;
+      }
+      if (e.bcc && Array.isArray(e.bcc)) {
+        temp.message.bccRecipients = e.bcc.map(function(f) {
+          return {
+            name: f.name,
+            emailAddress: f.email
+          };
+        });
+        delete e.bcc;
+      }
+      if (e.attachments && Array.isArray(e.attachments)) {
+        temp.message.attachments = e.attachments.map(function(f) {
+          if (f.toString() !== "Blob") {
+            throw new Error('Please set the attachment file as blob.');
+          }
+          return {
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            name: f.getName() || "no name",
+            contentType: f.getContentType(),
+            contentBytes: Utilities.base64Encode(f.getBytes())
+          };
+        });
+        delete e.attachments;
+      }
+      remain = Object.keys(e);
+      if (remain.length > 0) {
+        remain.forEach(function(f) {
+          return temp.message[f] = e[f];
+        });
+      }
+      return temp;
     };
 
     return OnedriveApp;

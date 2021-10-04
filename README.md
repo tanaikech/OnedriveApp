@@ -4,18 +4,36 @@
 
 [![MIT License](http://img.shields.io/badge/license-MIT-blue.svg?style=flat)](LICENCE)
 
-This is a library of Google Apps Script for using Microsoft OneDrive.
+This is a library to use [Microsoft Graph API](https://docs.microsoft.com/en-us/graph/overview) with Google Apps Script. OneDrive and Email can be managed using this library.
 
 ## Feature
+
+### [Drive of Microsoft Graph API](#drive)
 
 This library can carry out following functions using OneDrive APIs.
 
 1. [Retrieve access token and refresh token using client_id and client_secret](#authprocess)
-1. [Retrieve file list on OneDrive.](#Retrievefilelist)
-1. [Delete files and folders on OneDrive.](#Deletefilesandfolders)
-1. [Create folder on OneDrive.](#Createfolder)
-1. [Download files from OneDrive to Google Drive.](#Downloadfiles)
-1. [Upload files from Google Drive to OneDrive.](#Uploadfiles)
+1. [Retrieve file list on OneDrive.](#retrievefilelist)
+1. [Delete files and folders on OneDrive.](#deletefilesandfolders)
+1. [Create folder on OneDrive.](#createfolder)
+1. [Download files from OneDrive to Google Drive.](#downloadfiles)
+1. [Upload files from Google Drive to OneDrive.](#uploadfiles)
+
+By updating at October 5, 2021, OnedriveApp can get and send Emails using Microsoft Graph API.
+
+### [Utilities](#utilities)
+
+1. [Get access token](#getaccesstoken)
+
+### [Email of Microsoft Graph API](#email)
+
+1. [Get Email message list](#getemaillist)
+1. [Get Email messages](#getemails)
+1. [Send Email messages](#sendemails)
+1. [Reply Email messages](#replyemails)
+1. [Forward Email messages](#forwardemails)
+1. [Get Email folders](#getemailfolders)
+1. [Delete Email messages](#deleteemails)
 
 ## Demo
 
@@ -142,9 +160,17 @@ Or, if you can retrieve refresh token by other script, please check [here](https
 
 # Usage
 
-<a name="Retrievefilelist"></a>
+Also, you can see "[Known issues with Microsoft Graph](https://docs.microsoft.com/en-us/graph/known-issues)".
 
-## 1. Retrieve file list on OneDrive
+<a name="drive"></a>
+
+## Drive of Microsoft Graph API
+
+These methods manage OneDrive.
+
+<a name="retrievefilelist"></a>
+
+### 1. Retrieve file list on OneDrive
 
 ```javascript
 var prop = PropertiesService.getScriptProperties();
@@ -156,9 +182,9 @@ Filenames and file IDs are returned.
 
 If `"### folder name ###"` is not inputted (`var res = odapp.getFilelist()`), files and folders on the root directory are retrieved.
 
-<a name="Deletefilesandfolders"></a>
+<a name="deletefilesandfolders"></a>
 
-## 2. Delete files and folders on OneDrive.
+### 2. Delete files and folders on OneDrive.
 
 When a file is deleted,
 
@@ -186,13 +212,13 @@ var odapp = OnedriveApp.init(prop);
 var res = odapp.deleteItemById("### item ID ###");
 ```
 
-### Note :
+#### Note :
 
 **If you delete a folder, the files in the folder are also deleted. Please be careful about this.**
 
-<a name="Createfolder"></a>
+<a name="createfolder"></a>
 
-## 3. Create folder on OneDrive.
+### 3. Create folder on OneDrive.
 
 ```javascript
 var prop = PropertiesService.getScriptProperties();
@@ -208,9 +234,9 @@ var odapp = OnedriveApp.init(prop);
 var res = odapp.creatFolder("newfolder", "/sample1/sample2/");
 ```
 
-<a name="Downloadfiles"></a>
+<a name="downloadfiles"></a>
 
-## 4. Download files from OneDrive to Google Drive.
+### 4. Download files from OneDrive to Google Drive.
 
 ```javascript
 var prop = PropertiesService.getScriptProperties();
@@ -252,13 +278,13 @@ var odapp = OnedriveApp.init(prop);
 var res = odapp.downloadFile("/SampleFolder/sample.xlsx");
 ```
 
-### Note :
+#### Note :
 
 **From my previous experiences, I think that the maximum response size using URL Fetch is about 10 MB. And furthermore, there are the limitations for the download size in 1 day ([URL Fetch data received 100MB / day](https://developers.google.com/apps-script/guides/services/quotas#current_limitations)). So when you use this download method, please be careful the file size.**
 
-<a name="Uploadfiles"></a>
+<a name="uploadfiles"></a>
 
-## 5. Upload files from Google Drive to OneDrive.
+### 5. Upload files from Google Drive to OneDrive.
 
 ```javascript
 var fileid = "### file id ###";
@@ -287,15 +313,214 @@ var odapp = OnedriveApp.init(prop);
 var res = odapp.uploadFile(fileid);
 ```
 
-### Note :
+#### Note :
 
 **About this upload, in this library, [the resumable upload](https://dev.onedrive.com/items/upload_large_files.htm) is used for uploading files. So you can upload files with large size to OneDrive. But the chunk size is 10 MB, because of [the limitation of URL Fetch POST size on Google](https://developers.google.com/apps-script/guides/services/quotas#current_limitations). The file with large size is uploaded by separating by 10 MB. There are no limitations for upload size in one day.**
 
-# Contact
+<a name="utilities"></a>
 
-If you found bugs, limitations and you have questions, feel free to mail me.
+## Utilities
 
-e-mail: tanaike@hotmail.com
+<a name="getaccesstoken"></a>
+
+### 1. Get access token
+
+```javascript
+const accessToken = OnedriveApp.init(
+  PropertiesService.getScriptProperties()
+).getAccessToken();
+console.log(accessToken);
+```
+
+The access token is simply returned. When this access token is used, you can also test other methods of Microsoft Graph API.
+
+<a name="email"></a>
+
+## Email of Microsoft Graph API
+
+These methods manage Email.
+
+<a name="getemaillist"></a>
+
+### 1. Get Email message list
+
+```javascript
+const obj = {
+  numberOfEmails: 1,
+  select: ["createdDateTime", "sender", "subject", "bodyPreview"],
+  orderby: "createdDateTime",
+  order: "desc",
+  folderId: "###",
+};
+
+const prop = PropertiesService.getScriptProperties();
+const odapp = OnedriveApp.init(prop);
+const res = odapp.getEmailList(obj);
+console.log(res);
+```
+
+This method retrieves email list of your Microsoft account using Microsoft Graph API.
+
+About the properties of `obj`, you can see the following explanation.
+
+- `numberOfEmails`: Number of output email in the list. If the properties of `numberOfEmails` and `folderId` are not used, all email messages are retrieved.
+- `select: Properties you want to retrieve for each email of list. When you use `["*"]`, all properties are retrieved. But in this case, the process time is longer. Please be careful this.
+- `orderby`: When this is used, the list is ordered by the value of `orderby`.
+- `order`: `desc` or `asc`.
+- `folderId`: When you use this property, you can retrieve the email list from the specific folder of Email. About the method for retrieving the folder ID, please check "[Forward Email messages](#forwardemails)". When you don't use this property, all emails are retrieved as a list.
+
+Sample script: [This is a sample script for retrieving all emails from own emails of Microsoft and put to the Google Spreadsheet.]()
+
+<a name="getemails"></a>
+
+### 2. Get Email messages
+
+This method retrieves email messages of your Microsoft account using message IDs with Microsoft Graph API. As an important point of this method, in this method, the multiple emails can be retrieved using the batch request.
+
+```javascript
+const ar = ["messageId1", "messageId2", , ,];
+
+const prop = PropertiesService.getScriptProperties();
+const odapp = OnedriveApp.init(prop);
+const res = odapp.getEmailMessages(ar);
+console.log(res);
+```
+
+- The argument of `getEmailMessages(ar)` is an array including the message IDs. You can retrieve the message IDs with [the method of `getEmailList`](#getemaillist).
+
+<a name="sendemails"></a>
+
+### 3. Send Email messages
+
+This method sends email messages using Microsoft Graph API with your Microsoft account. As an important point of this method, in this method, the multiple emails can be sent using the batch request.
+
+```javascript
+const obj = [
+  {
+    to: [{ name: "### name ###", email: "### email address ###" }, , ,],
+    subject: "sample subject 1",
+    body: "sample text body",
+    cc: [{ name: "name1", email: "emailaddress1" }, , ,],
+  },
+  {
+    to: [{ name: "### name ###", email: "### email address ###" }, , ,],
+    subject: "sample subject 2",
+    htmlBody: "<u><b>sample html body</b></u>",
+    attachments: [blob],
+    bcc: [{ name: "name1", email: "emailaddress1" }, , ,],
+  },
+];
+
+const prop = PropertiesService.getScriptProperties();
+const odapp = OnedriveApp.init(prop);
+const res = odapp.sendEmails(obj);
+console.log(res);
+```
+
+About the properties of `obj`, you can see the following explanation.
+
+`to`: Email address of recipient. You can set the values as an array.
+`subject`: Email subject.
+`body`: Text body.
+`htmlBody`: HTML body. In this case, as the current specification of Microsoft Graph API, it seems that both the text body and the HTML body cannot be used. So please use one of them.
+`attachments`: For example, when you want to use the file on Google Drive, you can use `DriveApp.getFileById("### file ID ###").getBlob()`.
+`cc`: Email addresses to CC.
+`bcc`: Email addresses to BCC.
+
+<a name="replyemails"></a>
+
+### 4. Reply Email messages
+
+This method replies email messages using Microsoft Graph API with your Microsoft account. As an important point of this method, in this method, the multiple emails can be replied using the batch request.
+
+```javascript
+const obj = [
+  {
+    to: [{ name: "### name ###", email: "### email address ###" }],
+    body: "Sample replying message",
+    messageId: "###",
+  },
+];
+
+const prop = PropertiesService.getScriptProperties();
+const odapp = OnedriveApp.init(prop);
+const res = odapp.replyEmails(obj);
+console.log(res);
+```
+
+About the properties of `obj`, you can see the following explanation.
+
+The properties of `obj` are the same with [Send Email messages](#sendemails). But, in this case, please include `messageId` to reply to the email message.
+
+<a name="forwardemails"></a>
+
+### 5. Forward Email messages
+
+This method forwards email messages using Microsoft Graph API with your Microsoft account. As an important point of this method, in this method, the multiple emails can be forwarded using the batch request.
+
+```javascript
+const obj = [
+  {
+    to: [{ name: "### name ###", email: "### email address ###" }],
+    messageId: "###",
+  },
+];
+
+const prop = PropertiesService.getScriptProperties();
+const odapp = OnedriveApp.init(prop);
+const res = odapp.forwardEmails(obj);
+console.log(res);
+```
+
+About the properties of `obj`, you can see the following explanation.
+
+The properties of `obj` are the same with [Send Email messages](#sendemails). But, in this case, please include `messageId` to reply to the email message.
+
+<a name="getemailfolders"></a>
+
+### 6. Get Email folders
+
+This method retrieves the folders of Email of your Microsoft account.
+
+```javascript
+const prop = PropertiesService.getScriptProperties();
+const odapp = OnedriveApp.init(prop);
+const res = odapp.getEmailFolders();
+console.log(res);
+```
+
+<a name="deleteemails"></a>
+
+### 7. Delete Email messages
+
+This method deletes the email messages of your Microsoft account. As an important point of this method, in this method, the multiple emails can be deleted using the batch request.
+
+```javascript
+const ar = ["messageId1", "messageId2", , ,];
+
+const prop = PropertiesService.getScriptProperties();
+const odapp = OnedriveApp.init(prop);
+const res = odapp.deleteEmails(ar);
+console.log(res);
+```
+
+Please set the message IDs you want to delete. You can retrieve the message IDs with [the method of `getEmailList`](#getemaillist).
+
+<a name="licence"></a>
+
+# Licence
+
+[MIT](licence)
+
+<a name="author"></a>
+
+# Author
+
+[Tanaike](https://tanaikech.github.io/about/)
+
+If you have any questions and commissions for me, feel free to tell me.
+
+<a name="updatehistory"></a>
 
 # Update History
 
@@ -327,8 +552,12 @@ e-mail: tanaike@hotmail.com
 
   A bug of method of `uploadFile` was removed. By this, the files except for Google Docs files can be uploaded to OneDrive.
 
+- v1.2.0 (October 4, 2021)
+
+  [1 method for retrieving the access token](#utilities) and [7 methods for managing emails of Microsoft account](#email) were added. By this, the emails got to be able to be gotten and sent using Microsoft account using OnedriveApp with Google Apps Script.
+
 # Etc
 
-If you want the sample script for node.js, please check [here](https://gist.github.com/tanaikech/22bfb05e61f0afb8beed29dd668bdce9).
+If you want the sample script for uploading the contents using node.js, please check [here](https://gist.github.com/tanaikech/22bfb05e61f0afb8beed29dd668bdce9).
 
 [TOP](#top)
