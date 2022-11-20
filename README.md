@@ -556,6 +556,10 @@ If you have any questions and commissions for me, feel free to tell me.
 
   [1 method for retrieving the access token](#utilities) and [7 methods for managing emails of Microsoft account](#email) were added. By this, the emails got to be able to be gotten and sent using Microsoft account using OnedriveApp with Google Apps Script.
 
+# Performance test
+
+- November 20, 2022: No errors and no issues occur.
+
 # Etc
 
 If you want the sample script for uploading the contents using node.js, please check [here](https://gist.github.com/tanaikech/22bfb05e61f0afb8beed29dd668bdce9).
