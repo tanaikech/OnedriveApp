@@ -789,8 +789,10 @@ function getCode(e) {
       if (e.cc && Array.isArray(e.cc)) {
         temp.message.ccRecipients = e.cc.map(function(f) {
           return {
-            name: f.name,
-            emailAddress: f.email
+            emailAddress: {
+              name: f.name,
+              address: f.email
+            }
           };
         });
         delete e.cc;
@@ -798,8 +800,10 @@ function getCode(e) {
       if (e.bcc && Array.isArray(e.bcc)) {
         temp.message.bccRecipients = e.bcc.map(function(f) {
           return {
-            name: f.name,
-            emailAddress: f.email
+            emailAddress: {
+              name: f.name,
+              address: f.email
+            }
           };
         });
         delete e.bcc;
