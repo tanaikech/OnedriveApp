@@ -560,6 +560,10 @@ If you have any questions and commissions for me, feel free to tell me.
 
   A bug of "Send Email messages" was removed.
 
+- v1.2.2 (July 27, 2023)
+
+  Checked the array of `to`, `cc`, and `bcc` for the sendEmails method.
+
 # Performance test
 
 - November 20, 2022: No errors and no issues occur.

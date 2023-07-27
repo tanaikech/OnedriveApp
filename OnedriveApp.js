@@ -758,6 +758,9 @@ function getCode(e) {
 
     createEmailBody = function(e) {
       var remain, temp;
+      e.to = e.to.filter(function(f) {
+        return f && typeof f === "object";
+      });
       temp = {
         message: {
           subject: e.subject,
@@ -787,6 +790,9 @@ function getCode(e) {
         delete e.htmlBody;
       }
       if (e.cc && Array.isArray(e.cc)) {
+        e.cc = e.cc.filter(function(f) {
+          return f && typeof f === "object";
+        });
         temp.message.ccRecipients = e.cc.map(function(f) {
           return {
             emailAddress: {
@@ -798,6 +804,9 @@ function getCode(e) {
         delete e.cc;
       }
       if (e.bcc && Array.isArray(e.bcc)) {
+        e.bcc = e.bcc.filter(function(f) {
+          return f && typeof f === "object";
+        });
         temp.message.bccRecipients = e.bcc.map(function(f) {
           return {
             emailAddress: {
