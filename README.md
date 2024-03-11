@@ -564,10 +564,15 @@ If you have any questions and commissions for me, feel free to tell me.
 
   Checked the array of `to`, `cc`, and `bcc` for the sendEmails method.
 
+- v1.2.3 (March 11, 2024)
+
+  Modified the URL of the application installed in Microsoft Azure.
+
 # Performance test
 
 - November 20, 2022: No errors and no issues occur.
 - July 27, 2023: No errors and no issues occur.
+- March 11, 2024: No errors and no issues occur.
 
 # Etc
 
